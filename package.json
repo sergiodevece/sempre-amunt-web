@@ -1,0 +1,9 @@
+{
+  "name": "sempre-amunt",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "python3 generar.py",
+    "dev": "SITE_INDEXABLE=0 python3 generar.py && node worker/preview.mjs"
+  }
+}
