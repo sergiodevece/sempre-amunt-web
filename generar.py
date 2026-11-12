@@ -8,14 +8,13 @@ from html import escape as e
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from contenido import ARTICULOS, CALENDARIO, CLASIFICACION, CLUB, ESTADISTICAS, FICHAJES, JUGADORES, LIGA, PARTIDOS, TABLA
+from contenido import ARTICULOS, CALENDARIO, CLASIFICACION, CLUB, ESTADISTICAS, FECHA_EDICION_INICIAL, FICHAJES, JUGADORES, LIGA, PARTIDOS, TABLA
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "dist"
 CLIENT = OUT / "client"
 ORIGIN = os.getenv("SITE_ORIGIN", "https://area-mestalla.lamunecadesal.chatgpt.site").rstrip("/")
 INDEXABLE = os.getenv("SITE_INDEXABLE", "1") == "1"
-EDITION = "12 de noviembre de 2026"
 TOUR = CLUB + "/mestalla-forever-tour"
 MONTHS = "enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre".split()
 NAV = [
@@ -30,6 +29,11 @@ SEARCH = []
 def date_label(iso):
     value = datetime.fromisoformat(iso)
     return f"{value.day} de {MONTHS[value.month - 1]} de {value.year}"
+
+EDITION = date_label(FECHA_EDICION_INICIAL)
+
+def date_tag(iso):
+    return f'<time datetime="{e(iso)}">{date_label(iso)}</time>'
 
 def external(url, label, classes="text-link"):
     return f'<a class="{classes}" href="{e(url)}">{e(label)} <span aria-hidden="true">↗</span></a>'
@@ -58,6 +62,12 @@ def layout(path, title, description, body, current=None, schema=None, private=Fa
     data = {"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":ORIGIN+"/#website",
         "url":ORIGIN+"/","name":"SEMPRE AMUNT","inLanguage":"es-ES"}] + (schema or [])}
     robots = "index,follow,max-image-preview:large" if INDEXABLE and not private else "noindex,follow"
+    seo = f'<meta name="robots" content="{robots}">\n<link rel="canonical" href="{e(url)}">'
+    og_url = f'<meta property="og:url" content="{e(url)}">'
+    if path == "/hemeroteca/":
+        seo = f"<!--archivo-seo-->{seo}<!--/archivo-seo-->"
+        og_url = f"<!--archivo-og-url-->{og_url}<!--/archivo-og-url-->"
+    share_width, share_height = (768, 512) if share.endswith(".webp") else (1200, 630)
     return f'''<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -65,15 +75,16 @@ def layout(path, title, description, body, current=None, schema=None, private=Fa
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{e(full_title)}</title>
 <meta name="description" content="{e(description)}">
-<meta name="robots" content="{robots}">
-<link rel="canonical" href="{e(url)}">
+{seo}
 <meta property="og:site_name" content="SEMPRE AMUNT">
 <meta property="og:type" content="{'article' if path.startswith('/noticias/') else 'website'}">
 <meta property="og:locale" content="es_ES">
 <meta property="og:title" content="{e(full_title)}">
 <meta property="og:description" content="{e(description)}">
-<meta property="og:url" content="{e(url)}">
+{og_url}
 <meta property="og:image" content="{e(ORIGIN)}/assets/{share}">
+<meta property="og:image:width" content="{share_width}">
+<meta property="og:image:height" content="{share_height}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#191b19">
 <link rel="icon" href="/assets/favicon.png" type="image/png">
@@ -86,7 +97,7 @@ def layout(path, title, description, body, current=None, schema=None, private=Fa
 <body>
 <a class="skip" href="#contenido">Saltar al contenido</a>
 <header class="site-header">
-  <div class="utility"><div class="wrap utility-inner"><span>València <span class="dot">·</span> <!--fecha-edicion--><time datetime="2026-11-12">Jueves, 12 de noviembre de 2026</time><!--/fecha-edicion--></span><a href="/proyecto/">Sobre el proyecto</a></div></div>
+  <div class="utility"><div class="wrap utility-inner"><span>València <span class="dot">·</span> <!--fecha-edicion--><time datetime="{FECHA_EDICION_INICIAL}">Jueves, {EDITION}</time><!--/fecha-edicion--></span><a href="/proyecto/">Sobre el proyecto</a></div></div>
   <div class="wrap masthead"><div>{wordmark()}<div class="tagline">DIARIO VALENCIANISTA INDEPENDIENTE</div></div>
   <div class="mast-actions"><button class="search-button" type="button" data-search-open aria-label="Buscar">{symbol("search")}<span>Buscar</span></button><a class="member-button" href="/abonados/" aria-label="Abonados">{symbol("lock")}<span>Abonados</span></a><button class="menu-button" type="button" aria-expanded="false" aria-controls="nav-principal" aria-label="Menú">{symbol("menu")}</button></div></div>
   <div class="nav-band"><nav id="nav-principal" class="wrap main-nav" aria-label="Navegación principal">{nav}</nav></div>
@@ -96,7 +107,7 @@ def layout(path, title, description, body, current=None, schema=None, private=Fa
 <dialog class="search-dialog" id="buscador" aria-labelledby="buscar-titulo"><div class="dialog-head"><h2 id="buscar-titulo">Buscar en SEMPRE AMUNT</h2><form method="dialog"><button class="icon-button" aria-label="Cerrar búsqueda">×</button></form></div><label class="sr-only" for="buscar">Término de búsqueda</label><input id="buscar" type="search" placeholder="Noticias, jugadores, partidos…" autocomplete="off"><p class="search-status" aria-live="polite"></p><ul class="search-results"></ul></dialog>
 </body></html>'''
 
-def save(path, title, description, body, *, searchable=True, **options):
+def save(path, title, description, body, *, searchable=True, lastmod=None, **options):
     target = CLIENT / path.lstrip("/") / "index.html"
     target.parent.mkdir(parents=True, exist_ok=True)
     if path in ("/partidos/", "/clasificacion/", "/estadisticas/"):
@@ -106,7 +117,7 @@ def save(path, title, description, body, *, searchable=True, **options):
         body += "<!--noticias-seccion--><!--/noticias-seccion-->"
     target.write_text(layout(path, title, description, body, **options), encoding="utf-8")
     if not options.get("private"):
-        PAGES.append(path)
+        PAGES.append((path, lastmod))
     if searchable:
         SEARCH.append({"url":path, "title":title, "description":description})
 
@@ -131,7 +142,7 @@ def story_path(article):
 def article_card(article):
     return f'''<article class="story-card"><a class="story-photo" href="{story_path(article)}" tabindex="-1" aria-hidden="true">{photo(article)}</a><div class="story-copy">
 <span class="kicker">{article["tag"]}</span><h3><a href="{story_path(article)}">{e(article["title"])}</a></h3><p>{e(article["intro"])}</p>
-<time datetime="{article["date"]}">{date_label(article["date"])}</time></div></article>'''
+{date_tag(article["published_date"])}</div></article>'''
 
 def section_title(title, url=None, label=None):
     action = link(url, label) if url else ""
@@ -177,7 +188,7 @@ def sports_pages():
 
     summary = "Incorporaciones confirmadas del Valencia CF en el mercado de verano 2026/27."
     transfers = [(ARTICULOS[3],"cesion","Cesión","Liverpool FC"),(ARTICULOS[4],"traspaso","Traspaso","Girona FC")]
-    rows = "".join(f'''<tr data-kind="{kind}"><th scope="row"><a href="{story_path(article)}">{article["title"].split(",")[0] if kind == "cesion" else "Arnau Martínez"}</a></th><td>{club}</td><td><span class="pill">{name}</span></td><td><time datetime="{article["date"]}">{date_label(article["date"])}</time></td></tr>''' for article,kind,name,club in transfers)
+    rows = "".join(f'''<tr data-kind="{kind}"><th scope="row"><a href="{story_path(article)}">{article["title"].split(",")[0] if kind == "cesion" else "Arnau Martínez"}</a></th><td>{club}</td><td><span class="pill">{name}</span></td><td>{date_tag(article["source_date"])}</td></tr>''' for article,kind,name,club in transfers)
     body = heading("Fichajes del Valencia CF", summary) + f'''<section class="data-panel" data-filter-group>
 {section_title("Altas confirmadas")}<div class="controls"><label>Tipo de operación <select data-kind-select><option value="">Todas</option><option value="cesion">Cesiones</option><option value="traspaso">Traspasos</option></select></label><span class="filter-count" aria-live="polite"></span></div>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de fichajes"><table><caption class="sr-only">Altas seleccionadas del Valencia CF</caption><thead><tr><th scope="col">Jugador</th><th scope="col">Procedencia</th><th scope="col">Operación</th><th scope="col">Anuncio</th></tr></thead><tbody>{rows}</tbody></table></div>
@@ -261,18 +272,26 @@ def articles():
     for article in ARTICULOS:
         path = story_path(article)
         parent = (sections[article["cat"]],article["cat"])
+        published = article["published_date"]
+        modified = article.get("modified_date")
+        source_date = article.get("source_date")
+        source_date_note = f" · Fecha de la fuente: {date_tag(source_date)}" if source_date else ""
+        updated = f"<span>Actualizado: {date_tag(modified)}</span>" if modified else ""
         paragraphs = "".join(f"<p>{e(line)}</p>" for line in article["paragraphs"])
-        schema = [breadcrumb_data(parent,(path,article["title"])), {"@type":"NewsArticle","headline":article["title"],
-                  "description":article["intro"],"datePublished":"2026-11-12",
-                  "author":{"@type":"Organization","name":"Redacción SEMPRE AMUNT","url":ORIGIN+"/proyecto/"},
-                  "publisher":{"@type":"Organization","name":"SEMPRE AMUNT"},
-                  "image":ORIGIN+f'/assets/{article["img"]}.webp',"mainEntityOfPage":ORIGIN+path,"inLanguage":"es-ES"}]
+        news = {"@type":"NewsArticle","headline":article["title"],"description":article["intro"],"datePublished":published,
+                "author":{"@type":"Organization","name":"Redacción SEMPRE AMUNT","url":ORIGIN+"/proyecto/"},
+                "publisher":{"@type":"Organization","name":"SEMPRE AMUNT"},
+                "image":ORIGIN+f'/assets/{article["img"]}.webp',"mainEntityOfPage":ORIGIN+path,"inLanguage":"es-ES"}
+        if modified:
+            news["dateModified"] = modified
+        schema = [breadcrumb_data(parent,(path,article["title"])), news]
         related = [a for a in ARTICULOS if a is not article][:2]
         body = f'''<article class="article-page">{heading(article["title"],article["intro"],parent)}
-<div class="byline"><span>Redacción SEMPRE AMUNT</span><time datetime="2026-11-12">{EDITION}</time></div>
+<div class="byline"><span>Redacción SEMPRE AMUNT</span><span>Publicado: {date_tag(published)}</span>{updated}</div>
 <figure>{photo(article,priority=True)}<figcaption>Ilustración editorial generada para este proyecto.</figcaption></figure>
-<div class="article-body">{paragraphs}<p class="source-note">Fuente consultada: {external(article["source"],article["source_name"])}</p>{link(parent[0],f"Volver a {article['cat'].lower()}")}</div></article><section class="news-section">{section_title("Sigue leyendo")}<div class="cards">{''.join(map(article_card,related))}</div></section>'''
-        save(path, article["title"], article["intro"], body, current=parent[0], schema=schema, share=article["img"]+".webp")
+<div class="article-body">{paragraphs}<p class="source-note">Fuente consultada: {external(article["source"],article["source_name"])}{source_date_note}</p>{link(parent[0],f"Volver a {article['cat'].lower()}")}</div></article><section class="news-section">{section_title("Sigue leyendo")}<div class="cards">{''.join(map(article_card,related))}</div></section>'''
+        save(path, article["title"], article["intro"], body, current=parent[0], schema=schema,
+             share=article["img"]+".webp", lastmod=modified or published)
 
 def members():
     summary = "Entrevistas, sorteos, eventos y viajes del área de abonados de SEMPRE AMUNT."
@@ -302,7 +321,9 @@ def about():
 
 def finish(private_html):
     (CLIENT / "assets" / "busqueda.json").write_text(json.dumps(SEARCH, ensure_ascii=False), encoding="utf-8")
-    urls = "".join(f"  <url><loc>{e(ORIGIN+path)}</loc></url>\n" for path in PAGES)
+    urls = "".join(f"  <url><loc>{e(ORIGIN+path)}</loc>"
+                   + (f"<lastmod>{e(lastmod)}</lastmod>" if lastmod else "") + "</url>\n"
+                   for path, lastmod in PAGES)
     (CLIENT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+urls+"</urlset>\n")
     robots = "User-agent: *\nAllow: /\n"
     if INDEXABLE:
@@ -326,7 +347,7 @@ def finish(private_html):
     bundle.parent.mkdir(parents=True,exist_ok=True)
     source = "\n".join((ROOT / "worker" / name).read_text() for name in ("editorial.js", "index.js"))
     seed = [{"slug": article["slug"], "title": article["title"], "summary": article["intro"],
-             "date": article["date"], "source": article["source"], "img": article["img"],
+             "date": article["published_date"], "source": article["source"], "img": article["img"],
              "category": {"Fichajes": "fichajes", "Entrenamientos": "entrenamientos"}.get(article["cat"], "noticia")}
             for article in ARTICULOS]
     dynamic_template = layout("/noticias/edicion-dinamica/", "TITULO_EDICION", "RESUMEN_EDICION",
@@ -356,7 +377,7 @@ if __name__ == "__main__":
     stats_pages()
     articles()
     about()
-    archive = "Noticias, crónicas, entrevistas y opinión de SEMPRE AMUNT, ordenadas por fecha."
+    archive = "Noticias, crónicas, entrevistas y opinión de SEMPRE AMUNT, ordenadas por fecha de publicación."
     save("/hemeroteca/", "Hemeroteca del Valencia CF", archive,
          heading("Hemeroteca", archive) + "<!--archivo--><!--/archivo-->",
          schema=[breadcrumb_data(("/hemeroteca/", "Hemeroteca"))])

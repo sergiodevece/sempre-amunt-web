@@ -121,7 +121,7 @@ export default {
       if (edition) return edition;
     } catch (error) {
       console.error("Error al consultar la edición", error);
-      if (!PUBLIC_FILES[path.endsWith("/") ? path+"index.html" : path]) {
+      if (path === "/hemeroteca/" || path === "/sitemap.xml" || !PUBLIC_FILES[path.endsWith("/") ? path+"index.html" : path]) {
         return new Response("Edición temporalmente no disponible.",{status:503,headers:protectedHeaders()});
       }
     }

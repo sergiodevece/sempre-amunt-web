@@ -6,10 +6,12 @@ TABLA = LIGA + "/laliga-easports/clasificacion"
 CALENDARIO = LIGA + "/clubes/valencia-cf/proximos-partidos"
 ESTADISTICAS = LIGA + "/clubes/valencia-cf/estadisticas"
 FICHAJES = LIGA + "/clubes/valencia-cf/fichajes"
+FECHA_EDICION_INICIAL = "2026-11-12"
 
 ARTICULOS = [
     dict(slug="valencia-tavernes-copa-del-rey", cat="Actualidad", tag="COPA DEL REY",
-         title="El Valencia golea en Copa y pone rumbo a Vallecas", date="2026-11-12", img="mestalla",
+         title="El Valencia golea en Copa y pone rumbo a Vallecas",
+         published_date=FECHA_EDICION_INICIAL, source_date="2026-11-10", img="mestalla",
          alt="Ilustración de un estadio de fútbol iluminado, con la grada en naranja",
          intro="El 0–6 ante la UE Tavernes deja un doblete de Aimar Blázquez y una victoria antes del regreso a LaLiga.",
          paragraphs=[
@@ -19,7 +21,8 @@ ARTICULOS = [
          source=CLUB + "/cronica-el-valencia-cf-avanza-a-la-segunda-eliminatoria-de-la-copa-del-rey-tras-vencer-a-la-ue-tavernes-0-6",
          source_name="Crónica oficial del Valencia CF"),
     dict(slug="internacionales-valencia-noviembre", cat="Actualidad", tag="PRIMER EQUIPO",
-         title="Cuatro valencianistas, convocados con sus selecciones", date="2026-11-11", img="grada",
+         title="Cuatro valencianistas, convocados con sus selecciones",
+         published_date=FECHA_EDICION_INICIAL, source_date="2026-11-11", img="grada",
          alt="Ilustración de una grada con aficionados y banderas naranjas",
          intro="Dimitrievski, Dieng, Diakhaby y Sato tienen compromisos internacionales durante el parón.",
          paragraphs=[
@@ -28,7 +31,7 @@ ARTICULOS = [
          source=CLUB + "/conoce-la-agenda-de-nuestros-internacionales-para-noviembre-de-2026",
          source_name="Agenda oficial del Valencia CF"),
     dict(slug="plan-trabajo-valencia-paterna", cat="Entrenamientos", tag="ENTRENAMIENTOS",
-         title="El plan de trabajo tras la Copa del Rey", date="2026-11-10", img="paterna",
+         title="El plan de trabajo tras la Copa del Rey", published_date=FECHA_EDICION_INICIAL, img="paterna",
          alt="Ilustración de futbolistas en una sesión de entrenamiento",
          intro="El club publicó el parte de trabajo del 11 de noviembre tras la eliminatoria de Copa.",
          paragraphs=[
@@ -36,7 +39,8 @@ ARTICULOS = [
              "El siguiente partido de Liga está programado para el sábado 21 de noviembre en Vallecas. Puedes consultar la hora confirmada y descargar la cita desde el calendario de SEMPRE AMUNT."],
          source=CLUB + "/plan-de-trabajo", source_name="Plan de trabajo del Valencia CF"),
     dict(slug="harvey-elliott-cesion-valencia", cat="Fichajes", tag="FICHAJES",
-         title="Harvey Elliott, cedido por el Liverpool", date="2026-09-01", img="jugador",
+         title="Harvey Elliott, cedido por el Liverpool",
+         published_date=FECHA_EDICION_INICIAL, source_date="2026-09-01", img="jugador",
          alt="Ilustración de un futbolista anónimo mirando al campo desde el túnel",
          intro="El mediapunta inglés se incorporó al Valencia CF en préstamo para la temporada 2026/27.",
          paragraphs=[
@@ -44,7 +48,8 @@ ARTICULOS = [
              "Elliott se formó en el Fulham y debutó en la Premier League con 16 años. Su trayectoria incluye etapas en Blackburn Rovers y Aston Villa, además de su paso por el primer equipo del Liverpool."],
          source=CLUB + "/comunicado-oficial-harvey-elliott", source_name="Comunicado oficial del Valencia CF"),
     dict(slug="arnau-martinez-fichaje-valencia", cat="Fichajes", tag="FICHAJES",
-         title="Arnau Martínez firma hasta 2031", date="2026-08-26", img="jugador",
+         title="Arnau Martínez firma hasta 2031",
+         published_date=FECHA_EDICION_INICIAL, source_date="2026-08-26", img="jugador",
          alt="Ilustración de un futbolista anónimo en un túnel de estadio",
          intro="El lateral se incorporó desde el Girona FC con un contrato de cinco temporadas.",
          paragraphs=[

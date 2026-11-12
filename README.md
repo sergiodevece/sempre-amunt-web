@@ -38,6 +38,9 @@ La vista local usa la edición inicial incluida en el código y permite probar l
 | [worker/editorial.js](worker/editorial.js) | Publicación, validación, hemeroteca y actualización de datos deportivos. |
 | [drizzle/0000_ediciones.sql](drizzle/0000_ediciones.sql) | Tablas e índices de la base de datos D1. |
 | [worker/preview.mjs](worker/preview.mjs) | Servidor Node.js para la vista previa local. |
+| [tests/seo.test.mjs](tests/seo.test.mjs) | Pruebas de fechas, paginación y URLs del sitemap con SQLite en memoria. |
+
+Ejecuta `npm run test:seo` para comprobar el HTML, los datos estructurados y las rutas indexables con una edición de prueba.
 
 ## Documentación
 
@@ -46,6 +49,6 @@ La vista local usa la edición inicial incluida en el código y permite probar l
 
 ## Versión de referencia
 
-El código de aplicación corresponde a la versión 6 desplegada el **12 de noviembre de 2026**. Revisión del sitio de origen `468094a4adce5c04b3ade43dcb2d8edfad2615fc`. Esta copia usa un manifiesto portátil. Las credenciales, el archivo de verificación de Search Console y los datos de producción se gestionan en el sitio publicado.
+El código de aplicación corresponde a la versión 7 desplegada el **12 de noviembre de 2026**. Revisión del sitio de origen `a4f68b2330fc786109988263dc21beb29c525015`. Esta copia usa un manifiesto portátil. Las credenciales, el archivo de verificación de Search Console y los datos de producción se gestionan en el sitio publicado.
 
 Las imágenes editoriales son ilustraciones generadas para el proyecto. Los espacios publicitarios y las actividades de abonados son demostraciones. Las tipografías conservan sus archivos de licencia.

@@ -28,6 +28,8 @@ Busca el `<title>`, el `<h1>`, el elemento `<time>`, las tarjetas de partido y e
 
 Comprueba que el sitemap incluye la misma dirección canónica que aparece en el HTML de partidos. La vista previa añade `noindex` a sus páginas. Para el sitemap servido en producción, abre el [XML público](https://area-mestalla.lamunecadesal.chatgpt.site/sitemap.xml).
 
+Abre la noticia de Harvey Elliott y busca `datePublished` en el código fuente. Compara su valor con el atributo `datetime` de la firma y con el `lastmod` del sitemap. La fecha del comunicado del club aparece junto al enlace de la fuente.
+
 ## 4. Haz un cambio pequeño
 
 Edita el resumen de una noticia en `contenido.py`. Reinicia `npm run dev` y localiza el texto nuevo en la noticia y en la tarjeta que enlaza a ella. Después busca la misma URL en el sitemap. Puedes seguir la transformación desde el dato hasta cada representación con los nombres `ARTICULOS`, `articles()` y `finish()`.

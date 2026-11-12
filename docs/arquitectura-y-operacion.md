@@ -18,7 +18,7 @@ flowchart LR
 | `/fichajes/`, `/entrenamientos/` | Cobertura temática y enlaces a fuentes. |
 | `/partidos/` | Próximos partidos, resultados y descargas iCalendar con hora confirmada. |
 | `/clasificacion/`, `/estadisticas/` | Tabla de la competición y datos por jugador. |
-| `/hemeroteca/` | Búsqueda y filtros por tipo y mes, con paginación. |
+| `/hemeroteca/` | Búsqueda y filtros por tipo y mes de publicación, con paginación. |
 | `/noticias/{slug}/` | Artículo con fecha, fuentes y URL canónica. |
 | `/abonados/` | Acceso de demostración mediante sesión firmada. |
 | `/sitemap.xml`, `/robots.txt` | Descubrimiento de URLs y reglas de rastreo. |
@@ -41,6 +41,10 @@ La [migración SQL](../drizzle/0000_ediciones.sql) define estas tablas. El agent
 
 Las páginas editoriales tienen títulos, descripciones y URLs canónicas. El código genera metadatos Open Graph y datos estructurados `WebSite`, `BreadcrumbList`, `Article` o `NewsArticle`, según la página. La hemeroteca y las publicaciones nuevas se incorporan al sitemap. La zona de abonados conserva `noindex` y la comunidad exige una sesión válida.
 
+La fecha de publicación en SEMPRE AMUNT se muestra en la firma y en `datePublished`. La fecha de la fuente se presenta junto a su enlace cuando se conoce. Una revisión editorial sustancial registrada aparece en la firma y en `dateModified`. El `lastmod` de cada artículo refleja su publicación o su revisión. Las páginas generales omiten ese campo si carecen de una fecha fiable.
+
+Cada página de hemeroteca sin filtros y con resultados declara su URL como canónica. `?pagina=1` redirige a `/hemeroteca/`. Las páginas fuera de rango devuelven `404`. Las búsquedas y filtros se pueden rastrear para que Google lea `noindex,follow`. Los artículos se enlazan desde la hemeroteca y el sitemap.
+
 La propiedad de prefijo de URL se verificó en Google Search Console el **12 de noviembre de 2026**. El primer sitemap registrado ese día obtuvo el estado **Correcto**, con 13 páginas descubiertas. Tras incorporar la hemeroteca y cuatro piezas nuevas, el sitemap público sirvió 18 URLs. La indexación efectiva se consulta en el informe **Páginas** de Search Console.
 
 ## Compilación y producción
@@ -59,6 +63,7 @@ La vinculación al proyecto alojado, los secretos y el archivo de verificación 
 
 ## Validaciones de referencia
 
+- `npm run test:seo` comprueba las fechas visibles y estructuradas, la paginación con una segunda página real y que las URLs del sitemap devuelvan `200`, sean canónicas, indexables y estén enlazadas.
 - En producción se comprobaron las rutas editoriales, los filtros de hemeroteca, las URLs canónicas, el sitemap y el acceso a la comunidad.
 - La edición del 12 de noviembre incluyó calendario, resultados, clasificación y estadísticas, además de una noticia, una entrevista atribuida y una columna de opinión. Una prueba inmediata añadió una crónica del filial.
 - Reenviar la misma edición dejó intactas las piezas publicadas. Los artículos y los datos siguieron disponibles tras actualizar el despliegue.

@@ -243,7 +243,7 @@ async function sportsData(db) {
 }
 
 const editorLink = (url,label,classes="text-link") => `<a class="${classes}" href="${plain(url)}">${plain(label)} <span aria-hidden="true">↗</span></a>`;
-const editorDate = date => `<time datetime="${date}">${dateText(date)}</time>`;
+const editorDate = (date, timestamp = date) => `<time datetime="${plain(timestamp)}">${dateText(date)}</time>`;
 const editorSection = title => `<div class="section-title"><h2>${plain(title)}</h2></div>`;
 const editorPhoto = (a,leading=false) => `<img src="/assets/${a.img}.webp" alt="Ilustración editorial de fútbol" width="768" height="512" ${leading?'fetchpriority="high"':'loading="lazy"'} decoding="async">`;
 const editorLabel = a => EDITORIAL_CATEGORIES[a.category];
@@ -279,7 +279,9 @@ function archiveQuery(url) {
   const q = (url.searchParams.get("q") || "").trim().slice(0,100);
   const category = url.searchParams.get("tipo") || "";
   const month = url.searchParams.get("mes") || "";
-  const page = Math.max(1,Math.min(10000,parseInt(url.searchParams.get("pagina"),10)||1));
+  const rawPage = url.searchParams.get("pagina");
+  const pageNumber = rawPage === null ? 1 : Number(rawPage);
+  const page = (rawPage === null || /^\d+$/.test(rawPage)) && pageNumber >= 1 && pageNumber <= 10000 ? pageNumber : 0;
   return {q,category:Object.hasOwn(EDITORIAL_CATEGORIES,category)?category:"",month:/^\d{4}-(0[1-9]|1[0-2])$/.test(month)?month:"",page};
 }
 
@@ -292,12 +294,12 @@ async function archiveRows(db, query) {
     return {items:matches.slice((page-1)*size,page*size),more:matches.length>page*size};
   }
   const sql = `SELECT payload FROM (
-    SELECT payload, category, published_date, published_at, slug FROM editorial_articles
-    UNION ALL SELECT value, json_extract(value,'$.category'), json_extract(value,'$.date'), '', json_extract(value,'$.slug') FROM json_each(?)
+    SELECT payload, category, published_date, published_at, slug, 0 AS seed_order FROM editorial_articles
+    UNION ALL SELECT value, json_extract(value,'$.category'), json_extract(value,'$.date'), '', json_extract(value,'$.slug'), key FROM json_each(?)
   )
   WHERE (? = '' OR category = ?) AND (? = '' OR substr(published_date,1,7) = ?)
     AND (? = '' OR instr(lower(json_extract(payload,'$.title') || ' ' || json_extract(payload,'$.summary')),lower(?)) > 0)
-  ORDER BY published_date DESC, published_at DESC, slug DESC LIMIT ? OFFSET ?`;
+  ORDER BY published_date DESC, published_at DESC, seed_order, slug DESC LIMIT ? OFFSET ?`;
   const found = (await db.prepare(sql).bind(JSON.stringify(initialArticles),category,category,month,month,q,q,size+1,(page-1)*size).all()).results;
   return {items:found.slice(0,size).map(row=>JSON.parse(row.payload)),more:found.length>size};
 }
@@ -314,15 +316,20 @@ function archiveUrl(query,page) {
 function renderArchive(query, {items,more}) {
   const options = Object.entries(EDITORIAL_CATEGORIES).map(([key,label])=>
     `<option value="${key}"${key===query.category?" selected":""}>${label}</option>`).join("");
-  const previous = query.page>1 ? editorLink(archiveUrl(query,query.page-1),"Página anterior") : "";
+  const previous = query.page>1 && items.length ? editorLink(archiveUrl(query,query.page-1),"Página anterior") : "";
   const next = more ? editorLink(archiveUrl(query,query.page+1),"Página siguiente") : "";
   return `<form class="controls data-panel archive-form" method="get" action="/hemeroteca/">
 <label>Buscar <input type="search" name="q" maxlength="100" value="${plain(query.q)}"></label>
 <label>Tipo de pieza <select name="tipo"><option value="">Todos</option>${options}</select></label>
-<label>Mes <input type="month" name="mes" value="${query.month}"></label><button class="member-button" type="submit">Filtrar</button>
+<label>Mes de publicación <input type="month" name="mes" value="${query.month}"></label><button class="member-button" type="submit">Filtrar</button>
 <a class="text-link" href="/hemeroteca/">Limpiar filtros</a></form>
-${items.length ? editorialList("Archivo editorial",items) : "<p>No hay piezas para esos filtros.</p>"}
+${items.length ? editorialList("Archivo editorial",items) : query.page === 1 ? "<p>No hay piezas para esos filtros.</p>" : "<p>Esta página de la hemeroteca no existe.</p>"}
 <nav class="controls archive-pages" aria-label="Páginas de la hemeroteca">${previous}${next}</nav>`;
+}
+
+function articleModification(publishedAt, modifiedAt) {
+  const modified = Date.parse(modifiedAt);
+  return modified > Date.parse(publishedAt) ? new Date(modified).toISOString() : null;
 }
 
 function renderEditorialArticle(article) {
@@ -332,16 +339,20 @@ function renderEditorialArticle(article) {
   const hero = editorPhoto(article,true);
   const sources = article.sources.map(url=>"<li>"+editorLink(url,media(url))+"</li>").join("");
   const kindNote = article.category === "entrevista" ? "<p>Resumen de la entrevista publicada en la fuente enlazada.</p>" : "";
+  const published = article.publishedAt || article.date;
+  const modified = articleModification(published, article.modifiedAt);
+  const updated = modified ? `<span>Actualizado: ${editorDate(dayFormat.format(new Date(modified)),modified)}</span>` : "";
   const content = `<article class="article-page"><div class="page-heading">
 <nav class="crumbs" aria-label="Ruta de navegación"><a href="/">Portada</a> / <a href="/hemeroteca/">Hemeroteca</a></nav>
 <span class="kicker">${editorLabel(article)}</span><h1>${safeTitle}</h1><p>${safeSummary}</p></div>
-<div class="byline"><span>Redacción SEMPRE AMUNT · Edición automática</span>${editorDate(article.date)}</div>
+<div class="byline"><span>Redacción SEMPRE AMUNT · Edición automática</span><span>Publicado: ${editorDate(article.date,published)}</span>${updated}</div>
 <figure>${hero}<figcaption>Ilustración editorial del proyecto.</figcaption></figure>
 <div class="article-body">${kindNote}${article.paragraphs.map(p=>"<p>"+plain(p)+"</p>").join("")}
 <section class="data-panel" aria-label="Fuentes"><strong>Fuentes consultadas</strong><ul>${sources}</ul><p class="source-note">Fecha de la fuente principal: ${editorDate(article.sourceDate)}</p></section>
 <p>${editorLink("/hemeroteca/","Ver hemeroteca")}</p></div></article>`;
   const schema = {"@context":"https://schema.org","@type":article.category==="opinion"?"Article":"NewsArticle",
-    headline:article.title,description:article.summary,datePublished:article.publishedAt,
+    headline:article.title,description:article.summary,datePublished:published,
+    ...(modified ? {dateModified:modified} : {}),
     author:{"@type":"Organization",name:"Redacción SEMPRE AMUNT"},image:EDITORIAL_ORIGIN+"/assets/"+article.img+".webp",
     mainEntityOfPage:href,inLanguage:"es-ES"};
   const template = EDITORIAL_TEMPLATE.replaceAll("TITULO_EDICION",()=>safeTitle)
@@ -434,8 +445,8 @@ function playersHtml(snapshot) {
 <p class="empty-state" hidden>No hay jugadores que coincidan con los filtros.</p>${sportNote(snapshot,"Solo partidos de Liga.")}</section>`;
 }
 
-function responseEdition(request, body, type="html") {
-  return new Response(request.method==="HEAD"?null:body,{headers:headers({
+function responseEdition(request, body, type="html", status=200) {
+  return new Response(request.method==="HEAD"?null:body,{status,headers:headers({
     "Content-Type":CONTENT_TYPES[type],"Cache-Control":"public, max-age=0, must-revalidate",
     ...(!INDEXABLE?{"X-Robots-Tag":"noindex, follow"}:{}),
   })});
@@ -477,12 +488,32 @@ async function editorialPage(request,env,url) {
   };
   if (path === "/hemeroteca/") {
     const query = archiveQuery(url);
-    return responseEdition(request,await dateStamp(slot(staticHtml(),"archivo",renderArchive(query,await archiveRows(db,query)))));
+    const filtered = Boolean(query.q || query.category || query.month);
+    const rows = query.page ? await archiveRows(db,query) : {items:[],more:false};
+    const status = !query.page || (query.page>1 && !rows.items.length) ? 404 : 200;
+    const canonical = status === 200 && !filtered ? EDITORIAL_ORIGIN+archiveUrl(query,query.page) : "";
+    const normalizedPage = query.page>1 ? String(query.page) : null;
+    if (canonical && url.searchParams.get("pagina") !== normalizedPage) {
+      if (normalizedPage) url.searchParams.set("pagina",normalizedPage);
+      else url.searchParams.delete("pagina");
+      return new Response(null,{status:308,headers:headers({Location:path+url.search})});
+    }
+    const robots = INDEXABLE && canonical ? "index,follow,max-image-preview:large" : "noindex,follow";
+    let html = slot(staticHtml(),"archivo",renderArchive(query,rows));
+    html = slot(html,"archivo-seo",`<meta name="robots" content="${robots}">`+
+      (canonical ? `\n<link rel="canonical" href="${plain(canonical)}">` : ""));
+    if (canonical) html = slot(html,"archivo-og-url",`<meta property="og:url" content="${plain(canonical)}">`);
+    return responseEdition(request,await dateStamp(html),"html",status);
   }
   if (path === "/sitemap.xml") {
     const base = htmlText(PUBLIC_FILES[path]);
-    const {results} = db ? await db.prepare("SELECT slug,published_date FROM editorial_articles ORDER BY published_date DESC,slug DESC LIMIT 49000").all() : {results:[]};
-    const extra = results.map(r=>`  <url><loc>${EDITORIAL_ORIGIN}/noticias/${r.slug}/</loc><lastmod>${r.published_date}</lastmod></url>\n`).join("");
+    const {results} = db ? await db.prepare(
+      "SELECT slug,published_date,published_at,json_extract(payload,'$.modifiedAt') AS modified_at FROM editorial_articles ORDER BY published_date DESC,slug DESC LIMIT 49000"
+    ).all() : {results:[]};
+    const extra = results.map(row=>{
+      const lastmod = articleModification(row.published_at,row.modified_at) || row.published_date;
+      return `  <url><loc>${plain(EDITORIAL_ORIGIN+pagePath(row))}</loc><lastmod>${plain(lastmod)}</lastmod></url>\n`;
+    }).join("");
     return responseEdition(request,base.replace("</urlset>",extra+"</urlset>"),"xml");
   }
   if (path === "/assets/busqueda.json") {

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "python3 generar.py",
+    "test:seo": "npm run build && node --test tests/seo.test.mjs",
     "dev": "SITE_INDEXABLE=0 python3 generar.py && node worker/preview.mjs"
   }
 }
